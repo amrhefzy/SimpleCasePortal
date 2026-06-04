@@ -1,0 +1,137 @@
+@model SimpleCasePortal.Web.ViewModels.Audit.AuditLogListViewModel
+
+@{
+    ViewData["Title"] = "Audit Logs";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Audit Logs</h1>
+        <div class="text-muted">Read-only review of system activity.</div>
+    </div>
+    <span class="badge text-bg-secondary">@Model.TotalCount total</span>
+</div>
+
+<form asp-action="Index" method="get" class="border rounded p-3 mb-3">
+    <input type="hidden" name="PageNumber" value="1" />
+    <div class="row g-3">
+        <div class="col-md-3">
+            <label asp-for="Filter.Action" class="form-label"></label>
+            <select asp-for="Filter.Action" name="Action" asp-items="Model.ActionOptions" class="form-select">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.EntityName" class="form-label"></label>
+            <select asp-for="Filter.EntityName" name="EntityName" asp-items="Model.EntityNameOptions" class="form-select">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.UserId" class="form-label"></label>
+            <select asp-for="Filter.UserId" name="UserId" asp-items="Model.UserOptions" class="form-select">
+                <option value="">All</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.EntityId" class="form-label"></label>
+            <input asp-for="Filter.EntityId" name="EntityId" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.SearchText" class="form-label"></label>
+            <input asp-for="Filter.SearchText" name="SearchText" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.DateFrom" class="form-label"></label>
+            <input asp-for="Filter.DateFrom" name="DateFrom" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.DateTo" class="form-label"></label>
+            <input asp-for="Filter.DateTo" name="DateTo" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Filter.PageSize" class="form-label"></label>
+            <select asp-for="Filter.PageSize" name="PageSize" class="form-select">
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        <div class="col-md-4 d-flex align-items-end gap-2">
+            <button type="submit" class="btn btn-outline-primary">Filter</button>
+            <a class="btn btn-outline-secondary" asp-action="Index">Clear</a>
+        </div>
+    </div>
+</form>
+
+<div class="table-responsive">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Created</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Entity ID</th>
+                <th>IP address</th>
+                <th>Summary</th>
+                <th class="text-end">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!Model.Logs.Any())
+            {
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-4">No audit logs found.</td>
+                </tr>
+            }
+            else
+            {
+                foreach (var log in Model.Logs)
+                {
+                    <tr>
+                        <td>@log.CreatedOn.ToLocalTime().ToString("g")</td>
+                        <td>@log.UserDisplayName</td>
+                        <td>@log.Action</td>
+                        <td>@log.EntityName</td>
+                        <td>@log.EntityId</td>
+                        <td>@(log.IpAddress ?? "-")</td>
+                        <td class="text-break">@(string.IsNullOrWhiteSpace(log.Summary) ? "-" : log.Summary)</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@log.Id">Details</a>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<nav aria-label="Audit log pages" class="d-flex justify-content-between align-items-center">
+    <div class="text-muted">Page @Model.PageNumber of @Model.TotalPages</div>
+    <div class="btn-group">
+        <a class="btn btn-outline-secondary @(Model.HasPreviousPage ? string.Empty : "disabled")"
+           asp-action="Index"
+           asp-route-Action="@Model.Filter.Action"
+           asp-route-EntityName="@Model.Filter.EntityName"
+           asp-route-UserId="@Model.Filter.UserId"
+           asp-route-EntityId="@Model.Filter.EntityId"
+           asp-route-SearchText="@Model.Filter.SearchText"
+           asp-route-DateFrom="@Model.Filter.DateFrom?.ToString("yyyy-MM-dd")"
+           asp-route-DateTo="@Model.Filter.DateTo?.ToString("yyyy-MM-dd")"
+           asp-route-PageSize="@Model.PageSize"
+           asp-route-PageNumber="@(Model.PageNumber - 1)">Previous</a>
+        <a class="btn btn-outline-secondary @(Model.HasNextPage ? string.Empty : "disabled")"
+           asp-action="Index"
+           asp-route-Action="@Model.Filter.Action"
+           asp-route-EntityName="@Model.Filter.EntityName"
+           asp-route-UserId="@Model.Filter.UserId"
+           asp-route-EntityId="@Model.Filter.EntityId"
+           asp-route-SearchText="@Model.Filter.SearchText"
+           asp-route-DateFrom="@Model.Filter.DateFrom?.ToString("yyyy-MM-dd")"
+           asp-route-DateTo="@Model.Filter.DateTo?.ToString("yyyy-MM-dd")"
+           asp-route-PageSize="@Model.PageSize"
+           asp-route-PageNumber="@(Model.PageNumber + 1)">Next</a>
+    </div>
+</nav>

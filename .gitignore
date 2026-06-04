@@ -1,0 +1,11 @@
+.vs/
+.tools/
+bin/
+obj/
+**/bin/
+**/obj/
+*.csproj.user
+src/SimpleCasePortal.Web/App_Data/DataProtectionKeys/
+src/SimpleCasePortal.Web/App_Data/LocalStorage/
+**/App_Data/DataProtectionKeys/
+**/App_Data/LocalStorage/

@@ -1,0 +1,1292 @@
+# Codex Master Prompt - Simple Case Portal
+
+You are a senior .NET architect and senior ASP.NET Core MVC developer.
+
+I want you to implement a professional but simple application called **Simple Case Portal**.
+
+The application is similar in concept to our Dentist App, Workflow App, and Production App, but the first version must stay lightweight and practical.
+
+## Main Objective
+
+Build an ASP.NET Core MVC application that allows doctors or clinics to:
+
+1. Login securely.
+2. Create a new case.
+3. Automatically generate a case number.
+4. Enter patient information.
+5. Upload STL files and related attachments.
+6. Store files securely in DigitalOcean Spaces or S3-compatible storage.
+7. Manually sync selected cases to external systems by clicking buttons:
+   - Sync to Dentist App
+   - Sync to Workflow App
+   - Sync to Production App
+
+The system must be clean, secure, and suitable for long-term clinical file retention up to 10 years.
+
+---
+
+## Very Important Development Rules
+
+- Do not build quick hacks.
+- Follow clean layered architecture.
+- Use ASP.NET Core MVC.
+- Use SQL Server.
+- Use Entity Framework Core Code First.
+- Use repositories and services.
+- Controllers must not contain business logic.
+- Use async methods for I/O.
+- Use `ApiResponse<T>` for service responses.
+- Use soft delete for business records.
+- Never store uploaded files in `wwwroot`.
+- Never expose permanent public file URLs.
+- Store object keys in the database.
+- Generate temporary signed URLs for viewing/downloading files.
+- Do not hardcode secrets.
+- Use secure configuration for connection strings, API keys, and storage keys.
+- Add audit logs for important actions.
+- Add permission checks for sensitive endpoints.
+- Prefer complete and correct implementation over shortcuts.
+
+---
+
+## Required Architecture
+
+Create or adapt the solution to use this structure:
+
+```txt
+SimpleCasePortal.Web
+SimpleCasePortal.Application
+SimpleCasePortal.Domain
+SimpleCasePortal.Infrastructure
+```
+
+### Web Layer
+MVC controllers, Razor Views, ViewModels, UI only.
+
+### Application Layer
+Services, DTOs, interfaces, business logic, validation, ApiResponse.
+
+### Domain Layer
+Entities, enums, constants.
+
+### Infrastructure Layer
+DbContext, EF Core repositories, DigitalOcean/S3 storage service, external API clients.
+
+---
+
+## Required Modules
+
+### 1. Case Management
+
+Features:
+
+- Create case
+- Edit case
+- View case details
+- List/search/filter cases
+- Soft delete case
+- Automatic case number
+
+Required patient fields:
+
+- PatientName
+- Age
+- DateOfBirth
+- Gender
+- Notes
+
+Required case fields:
+
+- Id
+- CaseNumber
+- DoctorClinicId
+- Status
+- CreatedOn
+- UpdatedOn
+- IsDeleted
+
+Case number format:
+
+```txt
+CP-YYYY-000001
+```
+
+Example:
+
+```txt
+CP-2026-000001
+```
+
+Case number must be generated server-side only.
+
+---
+
+### 2. File Upload
+
+The user must be able to upload files per case.
+
+Initial allowed file types:
+
+```txt
+.stl
+.jpg
+.jpeg
+.png
+.pdf
+.zip
+```
+
+Important:
+
+- STL files are the main required files.
+- Files must be uploaded to private DigitalOcean Spaces / S3-compatible storage.
+- Database must store metadata and object key only.
+- Signed URLs must be generated for temporary access.
+- File deletion must be soft delete in the database.
+- Optional future physical deletion must be SuperAdmin only.
+
+File metadata required:
+
+- CaseId
+- FileType
+- OriginalFileName
+- StoredFileName
+- ObjectKey
+- ContentType
+- FileExtension
+- FileSizeBytes
+- UploadedByUserId
+- UploadedOn
+- IsDeleted
+
+Object key format:
+
+```txt
+cases/{caseNumber}/{fileType}/{yyyy}/{MM}/{uniqueFileId}_{safeFileName}
+```
+
+---
+
+### 3. Users, Roles, and Permissions
+
+Required roles:
+
+- SuperAdmin
+- Admin
+- Doctor
+- Clinic
+- Viewer
+
+Use permissions in addition to roles.
+
+Required permissions:
+
+```txt
+Cases.Create
+Cases.View.All
+Cases.View.Own
+Cases.Update
+Cases.Delete.Soft
+
+Files.Upload
+Files.View
+Files.Download
+Files.Delete.Soft
+
+Sync.Dentist
+Sync.Workflow
+Sync.Production
+Sync.Retry
+
+Users.Manage
+Roles.Manage
+Reports.View
+Audit.View
+Settings.Manage
+```
+
+Rules:
+
+- Doctor and Clinic users can only see their own cases.
+- Admin and SuperAdmin can see all cases.
+- Sync buttons appear only when the user has permission.
+- Download/view file actions require permission and ownership check.
+
+---
+
+### 4. Manual API Sync
+
+In Case Details page, add three buttons:
+
+```txt
+Sync to Dentist App
+Sync to Workflow App
+Sync to Production App
+```
+
+Each button should:
+
+1. Validate user permission.
+2. Load case data and files.
+3. Build target-specific payload.
+4. Send HTTP request to configured endpoint.
+5. Save sync log with request, response, status, error, and timestamp.
+6. Update UI with sync result.
+
+Create:
+
+- `IExternalSyncService`
+- `DentistApiClient`
+- `WorkflowApiClient`
+- `ProductionApiClient`
+
+Required sync log fields:
+
+- CaseId
+- SyncTarget
+- SyncStatus
+- RequestPayload
+- ResponsePayload
+- ErrorMessage
+- ExternalReferenceId
+- SyncedByUserId
+- SyncedOn
+- RetryCount
+
+---
+
+### 5. Audit Logging
+
+Add audit logs for:
+
+- Login success/failure
+- Case created
+- Case updated
+- Case deleted
+- File uploaded
+- File downloaded
+- File deleted
+- API sync started
+- API sync succeeded
+- API sync failed
+- User created
+- User role changed
+- Permission changed
+
+Audit log fields:
+
+- UserId
+- Action
+- EntityName
+- EntityId
+- OldValues
+- NewValues
+- IpAddress
+- UserAgent
+- CreatedOn
+
+---
+
+### 6. Security Requirements
+
+This system may store STL files and clinical case data for up to 10 years.
+
+Mandatory security requirements:
+
+- HTTPS only.
+- Private object storage only.
+- No permanent public links.
+- Signed URLs with short expiry.
+- Role and permission checks.
+- Ownership checks.
+- Soft delete.
+- Audit logging.
+- Secure cookies.
+- Anti-forgery tokens.
+- File extension validation.
+- File size validation.
+- Safe file name generation.
+- Secrets outside source code.
+- Backup strategy.
+- Least privilege access keys.
+- Error handling without exposing stack traces in production.
+
+---
+
+## Cost Information
+
+Development estimate:
+
+```txt
+Total: $2,800
+Hourly rate: $40/hour
+Estimated hours: 70 hours
+```
+
+Running cost:
+
+```txt
+Server deployment: €600/year
+Storage: $600/year for 1TB storage and 5TB traffic
+```
+
+---
+
+## Implementation Method
+
+Before writing code:
+
+1. Inspect the existing repository structure.
+2. Identify whether there is already a layered architecture.
+3. Reuse existing patterns if present.
+4. If no project exists, create the proposed solution structure.
+5. Implement incrementally in small commits.
+6. Build after each major step.
+7. Do not leave broken code.
+
+Recommended implementation order:
+
+1. Solution structure
+2. Domain entities and enums
+3. DbContext and repositories
+4. Services and ApiResponse
+5. User/role/permission setup
+6. Case CRUD
+7. File upload to DigitalOcean/S3
+8. Signed URL download
+9. Manual API sync
+10. Audit logging
+11. UI polish
+12. Security hardening
+13. Deployment preparation
+
+---
+
+## Expected Output from You
+
+When you work on this project:
+
+- Explain what you changed.
+- List files added/modified.
+- Mention database migration names.
+- Mention configuration keys needed.
+- Mention any assumptions.
+- Run build/test where possible.
+- Do not skip security requirements.
+
+Use the files in `/docs/codex/` as the project memory and implementation contract.
+
+
+==================== MEMORY TREE ====================
+
+
+# Project Memory Tree - Simple Case Portal
+
+## 1. Product Identity
+
+### Application Name
+Simple Case Portal
+
+### Business Type
+Dental / aligner case intake and STL file upload portal.
+
+### Main Business Goal
+Create a lightweight but professional application that allows doctors or clinics to create cases, upload STL files, and manually sync the case to existing systems such as Dentist App, Workflow App, and Production App.
+
+### Long-Term Vision
+The application should start simple but be designed as a stable foundation for future expansion into:
+
+- Case workflow tracking
+- Production routing
+- Doctor portal
+- Treatment plan uploads
+- Notifications
+- Advanced file viewer
+- Reporting
+- Accounting integration
+- AI / 3D modules later if required
+
+---
+
+## 2. Core Business Flow
+
+1. Admin creates or approves a doctor / clinic account.
+2. Doctor or clinic user logs in.
+3. User creates a new case.
+4. System generates automatic case number.
+5. User enters patient information.
+6. User uploads STL files and related case files.
+7. Files are stored privately in object storage.
+8. Database stores metadata and object keys only.
+9. Admin or authorized user reviews the case.
+10. User manually clicks sync button:
+    - Send to Dentist App
+    - Send to Workflow App
+    - Send to Production App
+11. System records sync status, response, error message, and timestamp.
+12. Case remains searchable and auditable for long-term traceability.
+
+---
+
+## 3. Technology Stack
+
+### Backend
+- ASP.NET Core MVC
+- C#
+- Entity Framework Core
+- SQL Server
+
+### Frontend
+- Razor Views
+- Bootstrap
+- JavaScript / jQuery where needed
+- AJAX for file upload and sync actions where practical
+
+### Storage
+- DigitalOcean Spaces or another S3-compatible provider
+- Private bucket / private objects only
+- Public files are not allowed by default
+
+### Hosting
+- Linux VPS / cloud server
+- Nginx reverse proxy
+- HTTPS using SSL certificate
+- Systemd service for .NET app
+
+---
+
+## 4. Architecture Rules
+
+The solution must follow a clean layered architecture.
+
+### Suggested Layers
+
+```txt
+SimpleCasePortal.Web
+SimpleCasePortal.Application
+SimpleCasePortal.Domain
+SimpleCasePortal.Infrastructure
+```
+
+### Layer Responsibilities
+
+#### Web
+- MVC controllers
+- Razor views
+- ViewModels
+- Authentication UI
+- Request validation
+- User interface only
+
+#### Application
+- Services
+- DTOs
+- Business logic
+- API response wrappers
+- Use cases
+- Validation rules
+
+#### Domain
+- Entities
+- Enums
+- Core business models
+- Domain constants
+
+#### Infrastructure
+- EF Core DbContext
+- Repositories
+- File storage implementation
+- External API clients
+- AppSettings access
+
+---
+
+## 5. Main Modules
+
+### Case Management
+- Create case
+- Edit case
+- View case details
+- Search/filter cases
+- Soft delete case
+- Automatic case numbering
+
+### File Management
+- Upload STL files
+- Upload photos or other allowed files
+- View files
+- Download files through secure signed URL
+- Soft delete files
+- Store file metadata
+
+### User Management
+- Doctor users
+- Clinic users
+- Admin users
+- Role assignment
+- Permission assignment
+
+### API Sync
+- Manual sync to Dentist App
+- Manual sync to Workflow App
+- Manual sync to Production App
+- Sync history
+- Retry failed sync
+- Log request and response
+
+### Audit
+- Login
+- Create case
+- Update case
+- Upload file
+- Delete file
+- Sync case
+- Permission changes
+
+---
+
+## 6. Roles
+
+### SuperAdmin
+Full access to everything.
+
+### Admin
+Manage cases, files, users, and sync actions.
+
+### Doctor
+Create and view own cases, upload files, view own files.
+
+### Clinic
+Create and view clinic cases, upload files, view clinic files.
+
+### Viewer
+Read-only access.
+
+---
+
+## 7. Permissions
+
+Use granular permissions in addition to roles.
+
+```txt
+Cases.Create
+Cases.View.All
+Cases.View.Own
+Cases.Update
+Cases.Delete.Soft
+
+Files.Upload
+Files.View
+Files.Download
+Files.Delete.Soft
+
+Sync.Dentist
+Sync.Workflow
+Sync.Production
+Sync.Retry
+
+Users.Manage
+Roles.Manage
+Reports.View
+Audit.View
+Settings.Manage
+```
+
+---
+
+## 8. Security Memory
+
+Files may need to remain stored for up to 10 years.
+
+Security must be treated as a first-class requirement.
+
+### Rules
+
+- Never save STL files in `wwwroot`.
+- Never make bucket public by default.
+- Store only object keys in DB, not public URLs.
+- Use signed URLs for temporary download/access.
+- Use HTTPS only.
+- Validate file type and extension.
+- Validate file size.
+- Sanitize file names.
+- Use malware scanning if possible.
+- Add audit logs for every important action.
+- Apply role and permission checks on every endpoint.
+- Use soft delete for cases and files.
+- Use retention policies and backups.
+- Do not hardcode secrets.
+- Use environment variables or secure configuration.
+- Encrypt sensitive data where needed.
+- Use least privilege access keys for object storage.
+
+---
+
+## 9. Case Numbering
+
+Use database ID as technical PK only.
+
+Use a separate business case number.
+
+Example:
+
+```txt
+CP-2026-000001
+CP-2026-000002
+```
+
+Case number must be generated server-side only.
+
+---
+
+## 10. File Storage Path Convention
+
+Recommended object key:
+
+```txt
+cases/{caseNumber}/{fileType}/{yyyy}/{MM}/{uniqueFileId}_{safeFileName}
+```
+
+Example:
+
+```txt
+cases/CP-2026-000001/UpperSTL/2026/06/9f8a_upper.stl
+```
+
+---
+
+## 11. Development Cost Memory
+
+Development cost:
+
+```txt
+Total: $2,800
+Hourly rate: $40/hour
+Estimated hours: 70 hours
+```
+
+Running cost:
+
+```txt
+Server deployment: €600/year
+Storage: $600/year for 1TB storage and 5TB traffic
+```
+
+---
+
+## 12. Coding Conventions
+
+- Use async methods where I/O exists.
+- Use `ApiResponse<T>` for service responses.
+- Do not inject DbContext directly into controllers.
+- Controllers call services only.
+- Services call repositories / unit of work.
+- Use DTOs and ViewModels.
+- Keep business logic outside controllers.
+- Use soft delete instead of physical delete.
+- Add comments only where useful.
+- Prefer complete correct solutions over quick fixes.
+
+
+==================== DATABASE BLUEPRINT ====================
+
+
+# Database Blueprint
+
+## General Rules
+
+- Use SQL Server.
+- Use EF Core Code First.
+- Use migrations.
+- Use soft delete for business data.
+- Use UTC datetime where possible.
+- Add indexes for frequent queries.
+- Store files as metadata only; physical files live in object storage.
+
+---
+
+## Table: DoctorClinics
+
+Represents doctor or clinic accounts.
+
+| Column | Type | Notes |
+|---|---|---|
+| Id | int | PK |
+| Name | nvarchar(250) | Doctor or clinic name |
+| Email | nvarchar(250) | Unique if used for login |
+| Phone | nvarchar(50) | Optional |
+| Country | nvarchar(100) | Optional |
+| City | nvarchar(100) | Optional |
+| Address | nvarchar(500) | Optional |
+| UserType | int | Doctor / Clinic |
+| IsActive | bit | Active or disabled |
+| CreatedOn | datetime2 | UTC |
+| UpdatedOn | datetime2 | Nullable |
+| IsDeleted | bit | Soft delete |
+
+---
+
+## Table: Cases
+
+| Column | Type | Notes |
+|---|---|---|
+| Id | int | PK |
+| CaseNumber | nvarchar(50) | Unique business reference |
+| DoctorClinicId | int | FK |
+| PatientName | nvarchar(250) | Required |
+| Age | int | Optional |
+| DateOfBirth | datetime2 | Optional |
+| Gender | nvarchar(20) | Optional |
+| Notes | nvarchar(max) | Optional |
+| Status | int | Draft / Submitted / Synced / Failed / Archived |
+| CreatedByUserId | int/string | Based on user system |
+| CreatedOn | datetime2 | UTC |
+| UpdatedOn | datetime2 | Nullable |
+| IsDeleted | bit | Soft delete |
+
+### Indexes
+
+- Unique index on CaseNumber.
+- Index on DoctorClinicId.
+- Index on Status.
+- Index on CreatedOn.
+- Index on IsDeleted.
+
+---
+
+## Table: CaseFiles
+
+| Column | Type | Notes |
+|---|---|---|
+| Id | int | PK |
+| CaseId | int | FK |
+| FileType | int | UpperSTL / LowerSTL / BiteSTL / Photo / Other |
+| OriginalFileName | nvarchar(500) | Original uploaded filename |
+| StoredFileName | nvarchar(500) | Safe stored filename |
+| ObjectKey | nvarchar(1000) | Storage object key |
+| ContentType | nvarchar(150) | MIME type |
+| FileExtension | nvarchar(20) | .stl, .jpg, etc. |
+| FileSizeBytes | bigint | Size |
+| Checksum | nvarchar(128) | Optional |
+| UploadedByUserId | int/string | Uploader |
+| UploadedOn | datetime2 | UTC |
+| IsDeleted | bit | Soft delete |
+| DeletedOn | datetime2 | Nullable |
+| DeletedByUserId | int/string | Nullable |
+
+### Rules
+
+- Do not store public URL.
+- Store object key only.
+- Generate signed URL when user requests download/view.
+
+---
+
+## Table: CaseSyncLogs
+
+| Column | Type | Notes |
+|---|---|---|
+| Id | int | PK |
+| CaseId | int | FK |
+| SyncTarget | int | Dentist / Workflow / Production |
+| SyncStatus | int | Pending / Success / Failed |
+| RequestPayload | nvarchar(max) | JSON |
+| ResponsePayload | nvarchar(max) | JSON |
+| ErrorMessage | nvarchar(max) | Nullable |
+| ExternalReferenceId | nvarchar(250) | Optional |
+| SyncedByUserId | int/string | User |
+| SyncedOn | datetime2 | UTC |
+| RetryCount | int | Default 0 |
+
+---
+
+## Table: AuditLogs
+
+| Column | Type | Notes |
+|---|---|---|
+| Id | bigint | PK |
+| UserId | int/string | Nullable |
+| Action | nvarchar(150) | Example: Case.Created |
+| EntityName | nvarchar(150) | Case, CaseFile, User |
+| EntityId | nvarchar(100) | Affected entity |
+| OldValues | nvarchar(max) | JSON optional |
+| NewValues | nvarchar(max) | JSON optional |
+| IpAddress | nvarchar(100) | Optional |
+| UserAgent | nvarchar(500) | Optional |
+| CreatedOn | datetime2 | UTC |
+
+---
+
+## Table: Roles
+
+| Column | Type |
+|---|---|
+| Id | int |
+| Name | nvarchar(150) |
+| Description | nvarchar(500) |
+| IsSystemRole | bit |
+
+---
+
+## Table: Permissions
+
+| Column | Type |
+|---|---|
+| Id | int |
+| Name | nvarchar(150) |
+| Description | nvarchar(500) |
+
+---
+
+## Table: RolePermissions
+
+| Column | Type |
+|---|---|
+| RoleId | int |
+| PermissionId | int |
+
+---
+
+## Suggested Enums
+
+### CaseStatusEnum
+
+```csharp
+public enum CaseStatusEnum
+{
+    Draft = 1,
+    Submitted = 2,
+    SyncedToDentist = 3,
+    SyncedToWorkflow = 4,
+    SyncedToProduction = 5,
+    SyncFailed = 6,
+    Archived = 7
+}
+```
+
+### FileTypeEnum
+
+```csharp
+public enum FileTypeEnum
+{
+    UpperSTL = 1,
+    LowerSTL = 2,
+    BiteSTL = 3,
+    Photo = 4,
+    Attachment = 5,
+    Other = 99
+}
+```
+
+### SyncTargetEnum
+
+```csharp
+public enum SyncTargetEnum
+{
+    DentistApp = 1,
+    WorkflowApp = 2,
+    ProductionApp = 3
+}
+```
+
+### SyncStatusEnum
+
+```csharp
+public enum SyncStatusEnum
+{
+    Pending = 1,
+    Success = 2,
+    Failed = 3
+}
+```
+
+
+==================== SECURITY REQUIREMENTS ====================
+
+
+# Security Requirements
+
+## 1. Security Objective
+
+The system will store clinical STL files and patient-related case data. Some files may need to remain available for up to 10 years. Security, traceability, and controlled access are mandatory.
+
+---
+
+## 2. Authentication
+
+- Use secure login.
+- Passwords must be hashed using a strong algorithm.
+- Enforce HTTPS.
+- Use secure cookies.
+- Use anti-forgery tokens for forms.
+- Optional future enhancement: Multi-factor authentication for admins.
+
+---
+
+## 3. Authorization
+
+- Use role-based access control.
+- Add granular permissions for sensitive actions.
+- Every controller action must check authorization.
+- Doctors and clinics must only access their own cases unless they have elevated permissions.
+- Admin-only actions must not be accessible from UI or direct URL.
+
+---
+
+## 4. File Security
+
+### Mandatory Rules
+
+- Do not save uploaded files in `wwwroot`.
+- Do not expose permanent public links.
+- Use private object storage.
+- Store object key in database.
+- Generate temporary signed URL for download/view.
+- Signed URLs should expire quickly, for example 5 to 30 minutes.
+- Validate file extension and MIME type.
+- Validate file size.
+- Sanitize original file names.
+- Use unique stored names.
+- Optional: calculate checksum for file integrity.
+- Optional: malware scanning pipeline.
+
+### Allowed File Types Initially
+
+```txt
+.stl
+.jpg
+.jpeg
+.png
+.pdf
+.zip
+```
+
+STL files are required. Other file types may be allowed based on business need.
+
+---
+
+## 5. Object Storage Security
+
+- Use least privilege access key.
+- Storage key should only allow required bucket actions.
+- Do not use root cloud keys.
+- Bucket must be private.
+- Enable versioning if available.
+- Enable lifecycle policies where suitable.
+- Enable storage logs if possible.
+- Use server-side encryption if available.
+
+---
+
+## 6. 10-Year Retention
+
+### Requirements
+
+- Files may be retained for up to 10 years.
+- Soft delete must be used in the application database.
+- Physical deletion should be restricted to SuperAdmin only.
+- Deletion should require audit log.
+- Retention metadata should be stored.
+- Backups must be tested, not only configured.
+- Use storage redundancy.
+- Document restoration procedure.
+
+### Recommended Retention Fields
+
+Add later if required:
+
+```txt
+RetentionUntil
+LegalHold
+ArchivedOn
+ArchiveStorageClass
+```
+
+---
+
+## 7. Audit Logging
+
+Audit logs must be created for:
+
+- Login success/failure
+- Case created
+- Case updated
+- Case soft deleted
+- File uploaded
+- File downloaded
+- File soft deleted
+- API sync started
+- API sync succeeded
+- API sync failed
+- User created
+- User role changed
+- Permission changed
+
+Audit logs should include:
+
+- User ID
+- Action
+- Entity name
+- Entity ID
+- Timestamp
+- IP address
+- User agent
+- Old and new values where practical
+
+---
+
+## 8. API Security
+
+Manual API sync must be protected by:
+
+- Permission checks
+- Server-to-server API keys or OAuth/client credentials
+- HTTPS only
+- Request timeout
+- Retry policy with limits
+- Logging of request and response
+- No sensitive secrets in logs
+- Idempotency key if supported
+
+---
+
+## 9. Configuration Security
+
+- Do not hardcode connection strings in code.
+- Do not hardcode storage access keys.
+- Use environment variables, secret manager, or secure server configuration.
+- appsettings.Development.json can be used locally but must not contain production secrets in Git.
+
+---
+
+## 10. Backup Strategy
+
+### Database
+- Daily automated SQL Server backup.
+- Weekly full backup.
+- Retain backup history based on business policy.
+- Store backups outside the same server.
+
+### Files
+- Object storage redundancy.
+- Versioning or replication if available.
+- Periodic restore test.
+
+---
+
+## 11. Deployment Security
+
+- Run app behind Nginx.
+- Enable HTTPS.
+- Disable unnecessary ports.
+- Use firewall.
+- Keep OS updated.
+- Use non-root app service user if possible.
+- Log application errors securely.
+- Monitor disk, CPU, memory, and failed requests.
+
+
+==================== IMPLEMENTATION TASKS ====================
+
+
+# Implementation Tasks for Codex
+
+## Phase 1 - Solution Setup
+
+1. Create ASP.NET Core MVC solution.
+2. Add projects:
+   - Web
+   - Application
+   - Domain
+   - Infrastructure
+3. Add project references.
+4. Configure SQL Server connection.
+5. Configure EF Core.
+6. Add dependency injection for services and repositories.
+7. Add base `ApiResponse<T>` class.
+
+Acceptance Criteria:
+
+- Solution builds successfully.
+- Web app runs.
+- Layers are connected correctly.
+- No business logic in controllers.
+
+---
+
+## Phase 2 - Domain and Database
+
+1. Create entities:
+   - Case
+   - CaseFile
+   - DoctorClinic
+   - CaseSyncLog
+   - AuditLog
+   - Role
+   - Permission
+   - RolePermission
+2. Create enums.
+3. Create DbContext.
+4. Add EF configurations.
+5. Add migrations.
+6. Seed default roles and permissions.
+
+Acceptance Criteria:
+
+- Database is created successfully.
+- Tables match blueprint.
+- Default roles and permissions are inserted.
+
+---
+
+## Phase 3 - Authentication and Authorization
+
+1. Implement login.
+2. Implement user roles.
+3. Implement permission checks.
+4. Protect controllers.
+5. Ensure doctors/clinics can access only own cases.
+6. Add admin access rules.
+
+Acceptance Criteria:
+
+- Unauthorized users cannot access protected pages.
+- Doctor sees only own cases.
+- Admin sees all cases.
+- Permission checks work for sync and file download.
+
+---
+
+## Phase 4 - Case Management
+
+1. Create case list screen.
+2. Add create case screen.
+3. Generate automatic case number.
+4. Add edit case screen.
+5. Add case details screen.
+6. Add status display.
+7. Add filters by case number, patient, doctor/clinic, status, date.
+8. Add soft delete.
+
+Acceptance Criteria:
+
+- User can create case.
+- Case number is unique and generated server-side.
+- Case details show patient and file sections.
+- Soft deleted cases are hidden by default.
+
+---
+
+## Phase 5 - File Upload
+
+1. Add DigitalOcean Spaces options.
+2. Implement `IFileStorageService`.
+3. Implement upload to private bucket.
+4. Add file validation.
+5. Add safe filename generation.
+6. Save file metadata.
+7. Generate signed download URL.
+8. Display files in case details.
+9. Add soft delete for files.
+
+Acceptance Criteria:
+
+- STL files upload successfully.
+- Files are not saved in `wwwroot`.
+- DB stores object key, not public URL.
+- Download uses signed URL.
+- User cannot download files without permission.
+
+---
+
+## Phase 6 - Manual API Sync
+
+1. Create external API options.
+2. Implement API clients:
+   - DentistApiClient
+   - WorkflowApiClient
+   - ProductionApiClient
+3. Implement `ExternalSyncService`.
+4. Add sync buttons in case details.
+5. Add permission checks.
+6. Log request and response.
+7. Display sync status.
+8. Add retry failed sync.
+
+Acceptance Criteria:
+
+- Sync button sends payload.
+- Sync logs are saved.
+- Errors are visible to admin.
+- Unauthorized users cannot sync.
+
+---
+
+## Phase 7 - Audit Logging
+
+1. Implement AuditService.
+2. Log important actions.
+3. Add Audit screen for admins.
+4. Add filters by user, action, entity, date.
+
+Acceptance Criteria:
+
+- Case creation is logged.
+- File upload/download/delete is logged.
+- Sync success/failure is logged.
+- Admin can view logs.
+
+---
+
+## Phase 8 - UI / UX
+
+1. Clean dashboard.
+2. Case cards or table.
+3. Clear upload section.
+4. Clear sync status section.
+5. Validation messages.
+6. Loading state for upload and sync buttons.
+7. Responsive layout.
+
+Acceptance Criteria:
+
+- UI is clean and practical.
+- User understands case status and sync status.
+- Upload errors are clear.
+
+---
+
+## Phase 9 - Security Hardening
+
+1. Validate all inputs.
+2. Add anti-forgery tokens.
+3. Enforce HTTPS.
+4. Add secure cookie settings.
+5. Confirm storage is private.
+6. Confirm signed URL expiry.
+7. Confirm no secrets in repo.
+8. Add error handling.
+9. Add backup instructions.
+
+Acceptance Criteria:
+
+- Security requirements document is satisfied.
+- Direct file public access is not possible.
+- App does not expose stack traces in production.
+
+---
+
+## Phase 10 - Deployment Preparation
+
+1. Prepare production appsettings template.
+2. Add Nginx deployment notes.
+3. Add systemd service example.
+4. Add database migration command.
+5. Add backup plan.
+6. Add environment variable documentation.
+
+Acceptance Criteria:
+
+- App can be deployed to VPS.
+- Required settings are documented.
+- Deployment is repeatable.

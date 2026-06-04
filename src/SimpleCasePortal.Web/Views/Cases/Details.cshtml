@@ -1,0 +1,262 @@
+@model SimpleCasePortal.Web.ViewModels.Cases.CaseDetailsViewModel
+@using SimpleCasePortal.Domain.Enums
+
+@{
+    ViewData["Title"] = $"Case {Model.Case.CaseNumber}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">@Model.Case.CaseNumber</h1>
+        <div class="text-muted">@Model.Case.PatientName</div>
+    </div>
+    <div class="d-flex gap-2">
+        <a class="btn btn-outline-secondary" asp-action="Index">Back to cases</a>
+        @if (Model.CanEdit)
+        {
+            <a class="btn btn-primary" asp-action="Edit" asp-route-id="@Model.Case.Id">Edit</a>
+        }
+    </div>
+</div>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+    <div class="alert alert-success">@statusMessage</div>
+}
+@if (TempData["SyncError"] is string syncError)
+{
+    <div class="alert alert-danger">@syncError</div>
+}
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <section class="border rounded p-3 h-100">
+            <h2 class="h5">Case information</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Status</dt>
+                <dd class="col-sm-8">@Model.Case.Status</dd>
+                <dt class="col-sm-4">Doctor/Clinic</dt>
+                <dd class="col-sm-8">@Model.Case.DoctorClinicName</dd>
+                <dt class="col-sm-4">Created</dt>
+                <dd class="col-sm-8">@Model.Case.CreatedOn.ToLocalTime().ToString("g")</dd>
+                <dt class="col-sm-4">Updated</dt>
+                <dd class="col-sm-8">@(Model.Case.UpdatedOn?.ToLocalTime().ToString("g") ?? "-")</dd>
+            </dl>
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="border rounded p-3 h-100">
+            <h2 class="h5">Patient information</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Name</dt>
+                <dd class="col-sm-8">@Model.Case.PatientName</dd>
+                <dt class="col-sm-4">Age</dt>
+                <dd class="col-sm-8">@(Model.Case.Age?.ToString() ?? "-")</dd>
+                <dt class="col-sm-4">Date of birth</dt>
+                <dd class="col-sm-8">@(Model.Case.DateOfBirth?.ToString("yyyy-MM-dd") ?? "-")</dd>
+                <dt class="col-sm-4">Gender</dt>
+                <dd class="col-sm-8">@(Model.Case.Gender ?? "-")</dd>
+            </dl>
+        </section>
+    </div>
+</div>
+
+<section class="border rounded p-3 mt-3">
+    <h2 class="h5">Notes</h2>
+    <p class="mb-0">@(string.IsNullOrWhiteSpace(Model.Case.Notes) ? "-" : Model.Case.Notes)</p>
+</section>
+
+<section class="border rounded p-3 mt-3">
+    <h2 class="h5">Files</h2>
+    @if (TempData["FileError"] is string fileError)
+    {
+        <div class="alert alert-danger">@fileError</div>
+    }
+
+    @if (Model.CanUploadFiles)
+    {
+        <form asp-controller="CaseFiles" asp-action="Upload" method="post" enctype="multipart/form-data" class="row g-3 mb-3">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="UploadFile.CaseId" name="CaseId" />
+            <div class="col-md-3">
+                <label asp-for="UploadFile.FileType" class="form-label"></label>
+                <select asp-for="UploadFile.FileType" name="FileType" asp-items="Html.GetEnumSelectList<SimpleCasePortal.Domain.Enums.FileTypeEnum>()" class="form-select"></select>
+            </div>
+            <div class="col-md-6">
+                <label asp-for="UploadFile.File" class="form-label"></label>
+                <input asp-for="UploadFile.File" name="File" class="form-control" type="file" />
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary">Upload file</button>
+            </div>
+        </form>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>File</th>
+                    <th>Size</th>
+                    <th>Uploaded</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (!Model.Files.Any())
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-3">No files uploaded yet.</td>
+                    </tr>
+                }
+                else
+                {
+                    foreach (var file in Model.Files)
+                    {
+                        <tr>
+                            <td>@file.FileType</td>
+                            <td>@file.OriginalFileName</td>
+                            <td>@FormatFileSize(file.FileSizeBytes)</td>
+                            <td>@file.UploadedOn.ToLocalTime().ToString("g")</td>
+                            <td class="text-end">
+                                @if (Model.CanDownloadFiles)
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" asp-controller="CaseFiles" asp-action="Download" asp-route-id="@file.Id">Download</a>
+                                }
+                                @if (Model.CanDeleteFiles)
+                                {
+                                    <form asp-controller="CaseFiles" asp-action="Delete" asp-route-id="@file.Id" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="border rounded p-3 mt-3">
+    <h2 class="h5">Manual sync</h2>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        @if (Model.CanSyncDentist)
+        {
+            <form asp-controller="Sync" asp-action="SyncToDentist" asp-route-caseId="@Model.Case.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">Sync to Dentist App</button>
+            </form>
+        }
+        @if (Model.CanSyncWorkflow)
+        {
+            <form asp-controller="Sync" asp-action="SyncToWorkflow" asp-route-caseId="@Model.Case.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">Sync to Workflow App</button>
+            </form>
+        }
+        @if (Model.CanSyncProduction)
+        {
+            <form asp-controller="Sync" asp-action="SyncToProduction" asp-route-caseId="@Model.Case.Id" method="post">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn btn-outline-primary">Sync to Production App</button>
+            </form>
+        }
+        @if (!Model.CanSyncDentist && !Model.CanSyncWorkflow && !Model.CanSyncProduction)
+        {
+            <span class="text-muted">You do not have permission to sync this case.</span>
+        }
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Target</th>
+                    <th>Status</th>
+                    <th>Last synced</th>
+                    <th>External reference</th>
+                    <th>Last error</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var status in Model.SyncStatuses.OrderBy(item => item.SyncTarget))
+                {
+                    <tr>
+                        <td>@FormatSyncTarget(status.SyncTarget)</td>
+                        <td><span class="badge @GetSyncBadgeClass(status.SyncStatus)">@FormatSyncStatus(status.SyncStatus)</span></td>
+                        <td>@(status.LastSyncedOn?.ToLocalTime().ToString("g") ?? "-")</td>
+                        <td>@(status.ExternalReferenceId ?? "-")</td>
+                        <td>@(status.LastErrorMessage ?? "-")</td>
+                        <td class="text-end">
+                            @if (status.CanRetry && status.LatestSyncLogId.HasValue)
+                            {
+                                <form asp-controller="Sync" asp-action="Retry" asp-route-syncLogId="@status.LatestSyncLogId.Value" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="caseId" value="@Model.Case.Id" />
+                                    <button type="submit" class="btn btn-sm btn-outline-warning">Retry</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@if (Model.CanDelete)
+{
+    <form asp-action="Delete" asp-route-id="@Model.Case.Id" method="post" class="mt-3">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-outline-danger">Soft delete case</button>
+    </form>
+}
+
+@functions {
+    private static string FormatFileSize(long bytes)
+    {
+        if (bytes >= 1024 * 1024)
+        {
+            return $"{bytes / 1024d / 1024d:0.##} MB";
+        }
+
+        if (bytes >= 1024)
+        {
+            return $"{bytes / 1024d:0.##} KB";
+        }
+
+        return $"{bytes} B";
+    }
+
+    private static string FormatSyncTarget(SyncTargetEnum target)
+    {
+        return target switch
+        {
+            SyncTargetEnum.DentistApp => "Dentist App",
+            SyncTargetEnum.WorkflowApp => "Workflow App",
+            SyncTargetEnum.ProductionApp => "Production App",
+            _ => target.ToString()
+        };
+    }
+
+    private static string FormatSyncStatus(SyncStatusEnum? status)
+    {
+        return status?.ToString() ?? "Not Synced";
+    }
+
+    private static string GetSyncBadgeClass(SyncStatusEnum? status)
+    {
+        return status switch
+        {
+            SyncStatusEnum.Pending => "text-bg-warning",
+            SyncStatusEnum.Success => "text-bg-success",
+            SyncStatusEnum.Failed => "text-bg-danger",
+            _ => "text-bg-secondary"
+        };
+    }
+}

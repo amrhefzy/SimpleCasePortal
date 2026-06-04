@@ -1,0 +1,70 @@
+@model SimpleCasePortal.Web.ViewModels.Audit.AuditLogDetailsViewModel
+
+@{
+    ViewData["Title"] = $"Audit Log {Model.Log.Id}";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Audit Log @Model.Log.Id</h1>
+        <div class="text-muted">@Model.Log.Action</div>
+    </div>
+    <a class="btn btn-outline-secondary" asp-action="Index">Back to audit logs</a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <section class="border rounded p-3 h-100">
+            <h2 class="h5">Event</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">Created</dt>
+                <dd class="col-sm-8">@Model.Log.CreatedOn.ToLocalTime().ToString("g")</dd>
+                <dt class="col-sm-4">Action</dt>
+                <dd class="col-sm-8">@Model.Log.Action</dd>
+                <dt class="col-sm-4">Entity</dt>
+                <dd class="col-sm-8">@Model.Log.EntityName</dd>
+                <dt class="col-sm-4">Entity ID</dt>
+                <dd class="col-sm-8">@Model.Log.EntityId</dd>
+            </dl>
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="border rounded p-3 h-100">
+            <h2 class="h5">Request context</h2>
+            <dl class="row mb-0">
+                <dt class="col-sm-4">User</dt>
+                <dd class="col-sm-8">@Model.Log.UserDisplayName</dd>
+                <dt class="col-sm-4">User ID</dt>
+                <dd class="col-sm-8">@(Model.Log.UserId ?? "-")</dd>
+                <dt class="col-sm-4">IP address</dt>
+                <dd class="col-sm-8">@(Model.Log.IpAddress ?? "-")</dd>
+                <dt class="col-sm-4">User agent</dt>
+                <dd class="col-sm-8 text-break">@(Model.Log.UserAgent ?? "-")</dd>
+            </dl>
+        </section>
+    </div>
+</div>
+
+<section class="border rounded p-3 mt-3">
+    <h2 class="h5">Old values</h2>
+    @if (string.IsNullOrWhiteSpace(Model.Log.OldValues))
+    {
+        <p class="text-muted mb-0">No old values recorded.</p>
+    }
+    else
+    {
+        <pre class="bg-light border rounded p-3 mb-0 text-break"><code>@Model.Log.OldValues</code></pre>
+    }
+</section>
+
+<section class="border rounded p-3 mt-3">
+    <h2 class="h5">New values</h2>
+    @if (string.IsNullOrWhiteSpace(Model.Log.NewValues))
+    {
+        <p class="text-muted mb-0">No new values recorded.</p>
+    }
+    else
+    {
+        <pre class="bg-light border rounded p-3 mb-0 text-break"><code>@Model.Log.NewValues</code></pre>
+    }
+</section>
