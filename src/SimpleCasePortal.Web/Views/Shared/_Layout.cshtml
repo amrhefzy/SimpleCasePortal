@@ -1,10 +1,17 @@
 @using SimpleCasePortal.Domain.Constants
+@using System.Security.Claims
 @inject SimpleCasePortal.Application.Interfaces.IPermissionService PermissionService
 @inject SimpleCasePortal.Application.Interfaces.ICurrentUserService CurrentUserService
 @{
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
     var canViewAuditLogs = User.Identity?.IsAuthenticated == true &&
         !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
         await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.AuditView);
+    var canViewCases = User.Identity?.IsAuthenticated == true &&
+        !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
+        (await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.CasesViewAll) ||
+            await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.CasesViewOwn));
+    var roleLabels = User.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray();
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -19,9 +26,9 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Simple Case Portal</a>
+                <a class="navbar-brand fw-semibold" asp-area="" asp-controller="Home" asp-action="Index">Simple Case Portal</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
@@ -29,17 +36,20 @@
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                            <a class="nav-link text-dark @(currentController == "Home" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
                         </li>
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-controller="Cases" asp-action="Index">Cases</a>
-                            </li>
+                            @if (canViewCases)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark @(currentController == "Cases" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Cases" asp-action="Index">Cases</a>
+                                </li>
+                            }
                             @if (canViewAuditLogs)
                             {
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-controller="Audit" asp-action="Index">Audit Logs</a>
+                                    <a class="nav-link text-dark @(currentController == "Audit" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Audit" asp-action="Index">Audit Logs</a>
                                 </li>
                             }
                         }
@@ -47,13 +57,17 @@
                     <ul class="navbar-nav">
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <li class="nav-item">
-                                <span class="navbar-text text-dark me-3">@User.Identity.Name</span>
+                            <li class="nav-item me-lg-3">
+                                <span class="navbar-text text-dark d-block py-0">@User.Identity.Name</span>
+                                @if (roleLabels.Length > 0)
+                                {
+                                    <span class="navbar-text text-muted small d-block py-0">@string.Join(", ", roleLabels)</span>
+                                }
                             </li>
                             <li class="nav-item">
                                 <form asp-controller="Account" asp-action="Logout" method="post">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-link nav-link text-dark p-0">Logout</button>
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm mt-1 mt-lg-0">Logout</button>
                                 </form>
                             </li>
                         }

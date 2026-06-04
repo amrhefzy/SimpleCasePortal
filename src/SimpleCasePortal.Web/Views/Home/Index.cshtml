@@ -1,9 +1,165 @@
+@model SimpleCasePortal.Web.ViewModels.Dashboard.DashboardViewModel
+@using SimpleCasePortal.Web.Ui
+
 @{
     ViewData["Title"] = "Dashboard";
 }
 
-<div class="py-4">
-    <h1 class="h3">Simple Case Portal</h1>
-    <p class="text-muted">Create, review, and manage clinical case intake records.</p>
-    <a class="btn btn-primary" asp-controller="Cases" asp-action="Index">Open cases</a>
+<div class="dashboard-hero mb-4">
+    <div>
+        <p class="text-uppercase text-muted fw-semibold small mb-1">Simple Case Portal</p>
+        <h1 class="h3 mb-1">Dashboard</h1>
+        <p class="text-muted mb-0">A quick view of case intake, files, sync health, and recent activity.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        @if (Model.Summary.CanCreateCase)
+        {
+            <a class="btn btn-primary" asp-controller="Cases" asp-action="Create">Create case</a>
+        }
+        @if (Model.Summary.CanViewCases)
+        {
+            <a class="btn btn-outline-primary" asp-controller="Cases" asp-action="Index">View cases</a>
+        }
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-2">
+        <div class="metric-card">
+            <span>Total cases</span>
+            <strong>@Model.Summary.TotalCases</strong>
+        </div>
+    </div>
+    <div class="col-6 col-lg-2">
+        <div class="metric-card">
+            <span>Draft</span>
+            <strong>@Model.Summary.DraftCases</strong>
+        </div>
+    </div>
+    <div class="col-6 col-lg-2">
+        <div class="metric-card">
+            <span>Submitted</span>
+            <strong>@Model.Summary.SubmittedCases</strong>
+        </div>
+    </div>
+    <div class="col-6 col-lg-2">
+        <div class="metric-card">
+            <span>Synced</span>
+            <strong>@Model.Summary.SyncedCases</strong>
+        </div>
+    </div>
+    <div class="col-6 col-lg-2">
+        <div class="metric-card metric-card-danger">
+            <span>Sync failed</span>
+            <strong>@Model.Summary.FailedSyncCases</strong>
+        </div>
+    </div>
+    <div class="col-6 col-lg-2">
+        <div class="metric-card">
+            <span>Files</span>
+            <strong>@Model.Summary.TotalUploadedFiles</strong>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-xl-7">
+        <section class="section-panel h-100">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2 class="h5 mb-0">Recent cases</h2>
+                @if (Model.Summary.CanViewCases)
+                {
+                    <a class="btn btn-sm btn-outline-secondary" asp-controller="Cases" asp-action="Index">All cases</a>
+                }
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Case</th>
+                            <th>Patient</th>
+                            <th>Doctor/Clinic</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.Summary.RecentCases.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="empty-state">No visible cases yet.</td>
+                            </tr>
+                        }
+                        else
+                        {
+                            foreach (var caseItem in Model.Summary.RecentCases)
+                            {
+                                <tr>
+                                    <td><a asp-controller="Cases" asp-action="Details" asp-route-id="@caseItem.Id">@caseItem.CaseNumber</a></td>
+                                    <td>@caseItem.PatientName</td>
+                                    <td>@caseItem.DoctorClinicName</td>
+                                    <td><span class="badge @UiFormatters.CaseStatusBadgeClass(caseItem.Status)">@caseItem.Status</span></td>
+                                    <td>@caseItem.CreatedOn.ToLocalTime().ToString("g")</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-xl-5">
+        <section class="section-panel mb-3">
+            <h2 class="h5 mb-3">Recent sync failures</h2>
+            @if (!Model.Summary.RecentSyncFailures.Any())
+            {
+                <p class="empty-state mb-0">No recent sync failures.</p>
+            }
+            else
+            {
+                <div class="list-group list-group-flush">
+                    @foreach (var failure in Model.Summary.RecentSyncFailures)
+                    {
+                        <a class="list-group-item list-group-item-action px-0" asp-controller="Cases" asp-action="Details" asp-route-id="@failure.CaseId">
+                            <div class="d-flex justify-content-between gap-2">
+                                <strong>@failure.CaseNumber</strong>
+                                <span class="badge text-bg-danger">@UiFormatters.SyncTargetLabel(failure.SyncTarget)</span>
+                            </div>
+                            <div class="small text-muted text-truncate">@(failure.ErrorMessage ?? "Sync failed.")</div>
+                            <div class="small text-muted">@failure.SyncedOn.ToLocalTime().ToString("g")</div>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+
+        @if (Model.Summary.CanViewAudit)
+        {
+            <section class="section-panel">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 class="h5 mb-0">Recent audit activity</h2>
+                    <a class="btn btn-sm btn-outline-secondary" asp-controller="Audit" asp-action="Index">Open audit</a>
+                </div>
+                @if (!Model.Summary.RecentAuditActivities.Any())
+                {
+                    <p class="empty-state mb-0">No audit activity recorded yet.</p>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var audit in Model.Summary.RecentAuditActivities)
+                        {
+                            <a class="list-group-item list-group-item-action px-0" asp-controller="Audit" asp-action="Details" asp-route-id="@audit.Id">
+                                <div class="d-flex justify-content-between gap-2">
+                                    <strong>@audit.Action</strong>
+                                    <span class="small text-muted">@audit.CreatedOn.ToLocalTime().ToString("g")</span>
+                                </div>
+                                <div class="small text-muted">@audit.EntityName @audit.EntityId by @audit.UserDisplayName</div>
+                            </a>
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
 </div>

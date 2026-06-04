@@ -6,6 +6,7 @@ using SimpleCasePortal.Application.Interfaces;
 using SimpleCasePortal.Infrastructure.Auth;
 using SimpleCasePortal.Infrastructure.Cases;
 using SimpleCasePortal.Infrastructure.Data;
+using SimpleCasePortal.Infrastructure.Dashboard;
 using SimpleCasePortal.Infrastructure.ExternalApis;
 using SimpleCasePortal.Infrastructure.Files;
 using SimpleCasePortal.Infrastructure.Repositories;
@@ -35,6 +36,7 @@ public static class DependencyInjection
         services.AddScoped<ICaseNumberGenerator, CaseNumberGenerator>();
         services.AddScoped<ICaseFileService, CaseFileService>();
         services.AddScoped<ICaseService, CaseService>();
+        services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<IExternalSyncService, ExternalSyncService>();
         services.AddScoped<ICaseAuthorizationService, CaseAuthorizationService>();
         services.AddScoped(FileStorageServiceFactory.Create);

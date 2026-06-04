@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 using SimpleCasePortal.Application.DTOs.Files;
 using SimpleCasePortal.Application.Interfaces;
@@ -8,12 +9,17 @@ namespace SimpleCasePortal.Infrastructure.Storage;
 public sealed class LocalDevelopmentStorageService : IFileStorageService
 {
     private readonly IDataProtector _protector;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly StorageOptions _options;
     private readonly string _rootPath;
 
-    public LocalDevelopmentStorageService(IDataProtectionProvider dataProtectionProvider, IOptions<StorageOptions> options)
+    public LocalDevelopmentStorageService(
+        IDataProtectionProvider dataProtectionProvider,
+        IHttpContextAccessor httpContextAccessor,
+        IOptions<StorageOptions> options)
     {
         _protector = dataProtectionProvider.CreateProtector("SimpleCasePortal.LocalSignedFiles.v1");
+        _httpContextAccessor = httpContextAccessor;
         _options = options.Value;
         _rootPath = Path.GetFullPath(_options.LocalRootPath ?? Path.Combine(AppContext.BaseDirectory, "App_Data", "LocalStorage"));
     }
@@ -41,7 +47,7 @@ public sealed class LocalDevelopmentStorageService : IFileStorageService
         var expiresOnUtc = DateTime.UtcNow.AddMinutes(Math.Max(1, _options.SignedUrlExpiryMinutes));
         var payload = string.Join("|", objectKey, fileName, expiresOnUtc.Ticks.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var token = Uri.EscapeDataString(_protector.Protect(payload));
-        var baseUrl = (_options.LocalBaseUrl ?? string.Empty).TrimEnd('/');
+        var baseUrl = GetLocalBaseUrl();
 
         return Task.FromResult(new SignedFileUrlDto
         {
@@ -97,6 +103,17 @@ public sealed class LocalDevelopmentStorageService : IFileStorageService
         }
 
         return fullPath;
+    }
+
+    private string GetLocalBaseUrl()
+    {
+        var request = _httpContextAccessor.HttpContext?.Request;
+        if (request is not null)
+        {
+            return $"{request.Scheme}://{request.Host}{request.PathBase}".TrimEnd('/');
+        }
+
+        return (_options.LocalBaseUrl ?? string.Empty).TrimEnd('/');
     }
 
     private static string GetContentType(string extension)

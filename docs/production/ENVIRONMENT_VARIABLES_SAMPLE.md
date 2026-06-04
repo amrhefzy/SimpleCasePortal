@@ -1,0 +1,44 @@
+# Environment Variables Sample
+
+Use this as a placeholder-only template for `/etc/casebridge/casebridge.env` or your secret manager.
+
+```bash
+ASPNETCORE_ENVIRONMENT=Production
+ASPNETCORE_URLS=http://127.0.0.1:5000
+AllowedHosts=YOUR_PUBLIC_HOSTNAME
+
+ConnectionStrings__DefaultConnection=YOUR_SQL_SERVER_CONNECTION_STRING
+
+Storage__Provider=DigitalOceanSpaces
+Storage__ServiceUrl=https://YOUR_REGION.digitaloceanspaces.com
+Storage__Region=YOUR_REGION
+Storage__BucketName=YOUR_PRIVATE_BUCKET_NAME
+Storage__AccessKey=YOUR_STORAGE_ACCESS_KEY
+Storage__SecretKey=YOUR_STORAGE_SECRET_KEY
+Storage__SignedUrlExpiryMinutes=15
+Storage__MaxFileSizeMb=200
+
+ExternalApis__UseFakeClientsInDevelopment=false
+
+ExternalApis__DentistApp__BaseUrl=https://DENTIST_APP_HOST
+ExternalApis__DentistApp__Endpoint=/api/cases
+ExternalApis__DentistApp__ApiKey=YOUR_DENTIST_APP_API_KEY
+ExternalApis__DentistApp__TimeoutSeconds=60
+ExternalApis__DentistApp__SendSignedFileUrls=false
+
+ExternalApis__WorkflowApp__BaseUrl=https://WORKFLOW_APP_HOST
+ExternalApis__WorkflowApp__Endpoint=/api/cases
+ExternalApis__WorkflowApp__ApiKey=YOUR_WORKFLOW_APP_API_KEY
+ExternalApis__WorkflowApp__TimeoutSeconds=60
+ExternalApis__WorkflowApp__SendSignedFileUrls=false
+
+ExternalApis__ProductionApp__BaseUrl=https://PRODUCTION_APP_HOST
+ExternalApis__ProductionApp__Endpoint=/api/cases
+ExternalApis__ProductionApp__ApiKey=YOUR_PRODUCTION_APP_API_KEY
+ExternalApis__ProductionApp__TimeoutSeconds=60
+ExternalApis__ProductionApp__SendSignedFileUrls=false
+
+DataProtection__KeysPath=/var/lib/casebridge/dp-keys
+```
+
+Do not commit the real environment file. Keep file permissions restricted to the app user and deployment operators.

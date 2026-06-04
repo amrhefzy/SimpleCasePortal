@@ -1,11 +1,15 @@
 @model SimpleCasePortal.Web.ViewModels.Cases.CaseListViewModel
+@using SimpleCasePortal.Web.Ui
 
 @{
     ViewData["Title"] = "Cases";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h3 mb-0">Cases</h1>
+<div class="page-heading">
+    <div>
+        <h1 class="h3 mb-1">Cases</h1>
+        <p class="text-muted mb-0">Search, review, and manage intake cases.</p>
+    </div>
     @if (Model.CanCreate)
     {
         <a class="btn btn-primary" asp-action="Create">Create case</a>
@@ -17,20 +21,20 @@
     <div class="alert alert-success">@statusMessage</div>
 }
 
-<form asp-action="Index" method="get" class="border rounded p-3 mb-3">
+<form asp-action="Index" method="get" class="filter-panel mb-3">
     <div class="row g-3">
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label asp-for="Filter.CaseNumber" class="form-label"></label>
-            <input asp-for="Filter.CaseNumber" name="CaseNumber" class="form-control" />
+            <input asp-for="Filter.CaseNumber" name="CaseNumber" class="form-control" placeholder="CP-2026-000001" />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label asp-for="Filter.PatientName" class="form-label"></label>
-            <input asp-for="Filter.PatientName" name="PatientName" class="form-control" />
+            <input asp-for="Filter.PatientName" name="PatientName" class="form-control" placeholder="Patient name" />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-4">
             <label asp-for="Filter.Status" class="form-label"></label>
             <select asp-for="Filter.Status" name="Status" asp-items="Html.GetEnumSelectList<SimpleCasePortal.Domain.Enums.CaseStatusEnum>()" class="form-select">
-                <option value="">All</option>
+                <option value="">All statuses</option>
             </select>
         </div>
         @if (Model.CanFilterByDoctorClinic)
@@ -38,71 +42,85 @@
             <div class="col-md-4">
                 <label asp-for="Filter.DoctorClinicId" class="form-label"></label>
                 <select asp-for="Filter.DoctorClinicId" name="DoctorClinicId" asp-items="Model.DoctorClinicOptions" class="form-select">
-                    <option value="">All</option>
+                    <option value="">All doctors/clinics</option>
                 </select>
             </div>
         }
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label asp-for="Filter.CreatedFrom" class="form-label"></label>
             <input asp-for="Filter.CreatedFrom" name="CreatedFrom" class="form-control" />
         </div>
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label asp-for="Filter.CreatedTo" class="form-label"></label>
             <input asp-for="Filter.CreatedTo" name="CreatedTo" class="form-control" />
         </div>
-        <div class="col-md-3 d-flex align-items-end gap-2">
-            <button type="submit" class="btn btn-outline-primary">Filter</button>
+        <div class="col-12 d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-outline-primary">Apply filters</button>
             <a class="btn btn-outline-secondary" asp-action="Index">Clear</a>
         </div>
     </div>
 </form>
 
-<div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th>Case number</th>
-                <th>Patient</th>
-                <th>Doctor/Clinic</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th class="text-end">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (!Model.Cases.Any())
-            {
+<section class="section-panel">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
                 <tr>
-                    <td colspan="6" class="text-center text-muted py-4">No cases found.</td>
+                    <th>Case number</th>
+                    <th>Patient</th>
+                    <th>Doctor/Clinic</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th class="text-end">Actions</th>
                 </tr>
-            }
-            else
-            {
-                foreach (var caseItem in Model.Cases)
+            </thead>
+            <tbody>
+                @if (!Model.Cases.Any())
                 {
                     <tr>
-                        <td>@caseItem.CaseNumber</td>
-                        <td>@caseItem.PatientName</td>
-                        <td>@caseItem.DoctorClinicName</td>
-                        <td>@caseItem.Status</td>
-                        <td>@caseItem.CreatedOn.ToLocalTime().ToString("g")</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@caseItem.Id">Details</a>
-                            @if (Model.CanEdit)
+                        <td colspan="6" class="empty-state py-5">
+                            No cases match the current filters.
+                            @if (Model.CanCreate)
                             {
-                                <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@caseItem.Id">Edit</a>
-                            }
-                            @if (Model.CanDelete)
-                            {
-                                <form asp-action="Delete" asp-route-id="@caseItem.Id" method="post" class="d-inline">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                </form>
+                                <div class="mt-2">
+                                    <a class="btn btn-sm btn-primary" asp-action="Create">Create the first case</a>
+                                </div>
                             }
                         </td>
                     </tr>
                 }
-            }
-        </tbody>
-    </table>
-</div>
+                else
+                {
+                    foreach (var caseItem in Model.Cases)
+                    {
+                        <tr>
+                            <td>
+                                <a class="fw-semibold text-decoration-none" asp-action="Details" asp-route-id="@caseItem.Id">@caseItem.CaseNumber</a>
+                            </td>
+                            <td>@caseItem.PatientName</td>
+                            <td>@caseItem.DoctorClinicName</td>
+                            <td><span class="badge @UiFormatters.CaseStatusBadgeClass(caseItem.Status)">@caseItem.Status</span></td>
+                            <td>@caseItem.CreatedOn.ToLocalTime().ToString("g")</td>
+                            <td class="text-end">
+                                <div class="d-inline-flex flex-wrap justify-content-end gap-1">
+                                    <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@caseItem.Id">Details</a>
+                                    @if (Model.CanEdit)
+                                    {
+                                        <a class="btn btn-sm btn-outline-secondary" asp-action="Edit" asp-route-id="@caseItem.Id">Edit</a>
+                                    }
+                                    @if (Model.CanDelete)
+                                    {
+                                        <form asp-action="Delete" asp-route-id="@caseItem.Id" method="post" class="d-inline">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                        </form>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

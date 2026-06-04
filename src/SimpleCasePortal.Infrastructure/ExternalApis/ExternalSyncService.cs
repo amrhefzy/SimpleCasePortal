@@ -219,7 +219,7 @@ public sealed class ExternalSyncService : IExternalSyncService
             CaseId = caseId,
             SyncTarget = syncTarget,
             SyncStatus = SyncStatusEnum.Pending,
-            RequestPayload = JsonSerializer.Serialize(safePayload, JsonOptions),
+            RequestPayload = SanitizePayload(JsonSerializer.Serialize(safePayload, JsonOptions)) ?? string.Empty,
             SyncedByUserId = userId,
             SyncedOn = now,
             RetryCount = retryCount
@@ -406,18 +406,27 @@ public sealed class ExternalSyncService : IExternalSyncService
         try
         {
             var node = JsonNode.Parse(payload);
-            MaskDownloadUrls(node);
+            MaskSensitivePayloadFields(node);
             return node?.ToJsonString(JsonOptions);
         }
         catch (JsonException)
         {
-            return payload.Contains("downloadUrl", StringComparison.OrdinalIgnoreCase)
-                ? "[Response payload omitted because it may contain signed URLs.]"
+            return ContainsSensitivePayloadValue(payload)
+                ? "[Payload omitted because it may contain storage locators or signed URLs.]"
                 : payload;
         }
     }
 
-    private static void MaskDownloadUrls(JsonNode? node)
+    private static bool ContainsSensitivePayloadValue(string payload)
+    {
+        return payload.Contains("downloadUrl", StringComparison.OrdinalIgnoreCase) ||
+            payload.Contains("objectKey", StringComparison.OrdinalIgnoreCase) ||
+            payload.Contains("LocalSignedDownload", StringComparison.OrdinalIgnoreCase) ||
+            payload.Contains("X-Amz-Signature", StringComparison.OrdinalIgnoreCase) ||
+            payload.Contains("cases/CP-", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void MaskSensitivePayloadFields(JsonNode? node)
     {
         if (node is JsonObject jsonObject)
         {
@@ -427,9 +436,13 @@ public sealed class ExternalSyncService : IExternalSyncService
                 {
                     jsonObject[propertyName] = null;
                 }
+                else if (string.Equals(propertyName, "objectKey", StringComparison.OrdinalIgnoreCase))
+                {
+                    jsonObject[propertyName] = "[REDACTED_OBJECT_KEY]";
+                }
                 else
                 {
-                    MaskDownloadUrls(jsonObject[propertyName]);
+                    MaskSensitivePayloadFields(jsonObject[propertyName]);
                 }
             }
         }
@@ -437,7 +450,7 @@ public sealed class ExternalSyncService : IExternalSyncService
         {
             foreach (var child in jsonArray)
             {
-                MaskDownloadUrls(child);
+                MaskSensitivePayloadFields(child);
             }
         }
     }

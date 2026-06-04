@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using SimpleCasePortal.Application.Interfaces;
 using SimpleCasePortal.Infrastructure.Data;
 using SimpleCasePortal.Infrastructure;
@@ -14,6 +16,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -28,9 +35,17 @@ builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
 });
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy("Application is running."));
+
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys");
+}
 
 builder.Services.AddDataProtection()
-    .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(builder.Environment.ContentRootPath, "App_Data", "DataProtectionKeys")));
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
 
 builder.Services.AddInfrastructure(builder.Configuration, builder.Environment);
 
@@ -69,21 +84,41 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
+}
+else
+{
+    app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
+app.UseStatusCodePagesWithReExecute("/Home/Error", "?statusCode={0}");
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers.TryAdd("X-Content-Type-Options", "nosniff");
+    headers.TryAdd("X-Frame-Options", "SAMEORIGIN");
+    headers.TryAdd("Referrer-Policy", "strict-origin-when-cross-origin");
+    headers.TryAdd("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    headers.TryAdd(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+
+    await next();
+});
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapStaticAssets();
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.MapControllerRoute(
     name: "default",

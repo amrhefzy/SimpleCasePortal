@@ -9,3 +9,5 @@ src/SimpleCasePortal.Web/App_Data/DataProtectionKeys/
 src/SimpleCasePortal.Web/App_Data/LocalStorage/
 **/App_Data/DataProtectionKeys/
 **/App_Data/LocalStorage/
+publish/
+**/publish/

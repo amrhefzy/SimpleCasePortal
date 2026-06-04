@@ -19,6 +19,7 @@ html {
 
 body {
   margin-bottom: 60px;
+  background: #f7f8fa;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -28,4 +29,111 @@ body {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
+}
+
+.navbar {
+  background: #fff;
+}
+
+.page-heading,
+.dashboard-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.section-panel,
+.filter-panel,
+.metric-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.metric-card {
+  min-height: 104px;
+}
+
+.metric-card span {
+  display: block;
+  color: #6c757d;
+  font-size: .875rem;
+  margin-bottom: .25rem;
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.metric-card-danger strong {
+  color: #dc3545;
+}
+
+.detail-list {
+  display: grid;
+  grid-template-columns: minmax(110px, 35%) 1fr;
+  gap: .5rem .75rem;
+}
+
+.detail-list dt {
+  color: #6c757d;
+  font-weight: 600;
+}
+
+.detail-list dd {
+  margin-bottom: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.upload-panel {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: .75rem;
+}
+
+.empty-state {
+  color: #6c757d;
+  text-align: center;
+}
+
+.required-label::after {
+  content: " *";
+  color: #dc3545;
+}
+
+.validation-summary-valid {
+  display: none;
+}
+
+.table td,
+.table th {
+  vertical-align: middle;
+}
+
+@media (max-width: 767.98px) {
+  .page-heading,
+  .dashboard-hero {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-heading .btn,
+  .dashboard-hero .btn {
+    width: 100%;
+  }
+
+  .metric-card {
+    min-height: 88px;
+  }
+
+  .metric-card strong {
+    font-size: 1.6rem;
+  }
 }
