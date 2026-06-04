@@ -18,19 +18,16 @@ public sealed class CaseNumberGenerator : ICaseNumberGenerator
         var year = DateTime.UtcNow.Year;
         var prefix = $"CP-{year}-";
 
-        var latestCaseNumber = await _dbContext.Cases
+        var caseNumbers = await _dbContext.Cases
             .AsNoTracking()
             .Where(caseEntity => caseEntity.CaseNumber.StartsWith(prefix))
-            .OrderByDescending(caseEntity => caseEntity.CaseNumber)
             .Select(caseEntity => caseEntity.CaseNumber)
-            .FirstOrDefaultAsync(cancellationToken);
+            .ToArrayAsync(cancellationToken);
 
-        var nextSequence = 1;
-        if (!string.IsNullOrWhiteSpace(latestCaseNumber) &&
-            int.TryParse(latestCaseNumber[prefix.Length..], out var latestSequence))
-        {
-            nextSequence = latestSequence + 1;
-        }
+        var nextSequence = caseNumbers
+            .Select(caseNumber => int.TryParse(caseNumber[prefix.Length..], out var sequence) ? sequence : 0)
+            .DefaultIfEmpty(0)
+            .Max() + 1;
 
         return $"{prefix}{nextSequence:000000}";
     }

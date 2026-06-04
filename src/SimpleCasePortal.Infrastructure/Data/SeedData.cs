@@ -121,8 +121,7 @@ internal static class SeedData
         [
             CasesViewAllPermissionId,
             FilesViewPermissionId,
-            FilesDownloadPermissionId,
-            ReportsViewPermissionId
+            FilesDownloadPermissionId
         ]);
 
         return [.. rolePermissions];

@@ -166,17 +166,16 @@ public static class DevelopmentAuthSeeder
     private static async Task<int> GetNextCaseSequenceAsync(AppDbContext dbContext)
     {
         var prefix = $"CP-{DateTime.UtcNow.Year}-";
-        var latestCaseNumber = await dbContext.Cases
+        var caseNumbers = await dbContext.Cases
             .AsNoTracking()
             .Where(caseEntity => caseEntity.CaseNumber.StartsWith(prefix))
-            .OrderByDescending(caseEntity => caseEntity.CaseNumber)
             .Select(caseEntity => caseEntity.CaseNumber)
-            .FirstOrDefaultAsync();
+            .ToArrayAsync();
 
-        return !string.IsNullOrWhiteSpace(latestCaseNumber) &&
-            int.TryParse(latestCaseNumber[prefix.Length..], out var latestSequence)
-                ? latestSequence + 1
-                : 1;
+        return caseNumbers
+            .Select(caseNumber => int.TryParse(caseNumber[prefix.Length..], out var sequence) ? sequence : 0)
+            .DefaultIfEmpty(0)
+            .Max() + 1;
     }
 
     private static string FormatCaseNumber(int sequence)

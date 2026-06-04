@@ -7,6 +7,9 @@
     var canViewAuditLogs = User.Identity?.IsAuthenticated == true &&
         !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
         await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.AuditView);
+    var canViewReports = User.Identity?.IsAuthenticated == true &&
+        !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
+        await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.ReportsView);
     var canViewCases = User.Identity?.IsAuthenticated == true &&
         !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
         (await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.CasesViewAll) ||
@@ -44,6 +47,12 @@
                             {
                                 <li class="nav-item">
                                     <a class="nav-link text-dark @(currentController == "Cases" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Cases" asp-action="Index">Cases</a>
+                                </li>
+                            }
+                            @if (canViewReports)
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark @(currentController == "Reports" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
                                 </li>
                             }
                             @if (canViewAuditLogs)

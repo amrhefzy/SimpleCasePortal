@@ -1,0 +1,273 @@
+@model SimpleCasePortal.Web.ViewModels.Reports.ReportsDashboardViewModel
+@using SimpleCasePortal.Web.Ui
+
+@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="page-heading">
+    <div>
+        <h1 class="h3 mb-1">Reports</h1>
+        <p class="text-muted mb-0">Operational analytics for cases, files, and manual sync activity.</p>
+    </div>
+</div>
+
+<section class="section-panel mb-3">
+    <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-2">
+            <label asp-for="Filter.DateFrom" class="form-label">Date from</label>
+            <input asp-for="Filter.DateFrom" name="DateFrom" type="date" class="form-control" />
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Filter.DateTo" class="form-label">Date to</label>
+            <input asp-for="Filter.DateTo" name="DateTo" type="date" class="form-control" />
+        </div>
+        @if (Model.CanFilterByDoctorClinic)
+        {
+            <div class="col-md-3">
+                <label asp-for="Filter.DoctorClinicId" class="form-label">Doctor/Clinic</label>
+                <select asp-for="Filter.DoctorClinicId" name="DoctorClinicId" asp-items="Model.DoctorClinicOptions" class="form-select">
+                    <option value="">All doctor/clinics</option>
+                </select>
+            </div>
+        }
+        <div class="col-md-2">
+            <label asp-for="Filter.CaseStatus" class="form-label">Case status</label>
+            <select asp-for="Filter.CaseStatus" name="CaseStatus" asp-items="Model.CaseStatusOptions" class="form-select">
+                <option value="">All statuses</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Filter.SyncTarget" class="form-label">Sync target</label>
+            <select asp-for="Filter.SyncTarget" name="SyncTarget" asp-items="Model.SyncTargetOptions" class="form-select">
+                <option value="">All targets</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label asp-for="Filter.SyncStatus" class="form-label">Sync status</label>
+            <select asp-for="Filter.SyncStatus" name="SyncStatus" asp-items="Model.SyncStatusOptions" class="form-select">
+                <option value="">All sync statuses</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Filter.SearchText" class="form-label">Search</label>
+            <input asp-for="Filter.SearchText" name="SearchText" class="form-control" placeholder="Case, patient, doctor/clinic" />
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary w-100">Apply filters</button>
+        </div>
+        <div class="col-md-2">
+            <a class="btn btn-outline-secondary w-100" asp-controller="Reports" asp-action="Index">Reset</a>
+        </div>
+    </form>
+</section>
+
+<section class="dashboard-grid mb-3">
+    <div class="metric-card">
+        <span>Total cases</span>
+        <strong>@Model.CaseSummary.TotalCases</strong>
+    </div>
+    <div class="metric-card">
+        <span>Draft</span>
+        <strong>@Model.CaseSummary.DraftCases</strong>
+    </div>
+    <div class="metric-card">
+        <span>Submitted</span>
+        <strong>@Model.CaseSummary.SubmittedCases</strong>
+    </div>
+    <div class="metric-card">
+        <span>Synced</span>
+        <strong>@Model.CaseSummary.SyncedCases</strong>
+    </div>
+    <div class="metric-card">
+        <span>Failed sync</span>
+        <strong>@Model.CaseSummary.FailedSyncCases</strong>
+    </div>
+    <div class="metric-card">
+        <span>Archived</span>
+        <strong>@Model.CaseSummary.ArchivedCases</strong>
+    </div>
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <section class="section-panel h-100">
+            <h2 class="h5">Case status distribution</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th class="text-end">Count</th>
+                            <th class="text-end">Percent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.CaseStatusDistribution.Count == 0)
+                        {
+                            <tr><td colspan="3" class="empty-state py-4">No case data for this filter.</td></tr>
+                        }
+                        @foreach (var item in Model.CaseStatusDistribution)
+                        {
+                            <tr>
+                                <td><span class="badge @UiFormatters.CaseStatusBadgeClass(item.Status)">@item.Status</span></td>
+                                <td class="text-end">@item.Count</td>
+                                <td class="text-end">@item.Percentage.ToString("0.##")%</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="section-panel h-100">
+            <h2 class="h5">File upload report</h2>
+            <dl class="detail-list">
+                <dt>Total files</dt>
+                <dd>@Model.FileUploadReport.TotalFiles</dd>
+                <dt>Total size</dt>
+                <dd>@UiFormatters.FileSize(Model.FileUploadReport.TotalFileSizeBytes)</dd>
+                <dt>STL files</dt>
+                <dd>@Model.FileUploadReport.StlFileCount</dd>
+            </dl>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th class="text-end">Files</th>
+                            <th class="text-end">Size</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.FileUploadReport.FilesByType.Count == 0)
+                        {
+                            <tr><td colspan="3" class="empty-state py-4">No files for this filter.</td></tr>
+                        }
+                        @foreach (var item in Model.FileUploadReport.FilesByType)
+                        {
+                            <tr>
+                                <td>@item.FileType</td>
+                                <td class="text-end">@item.Count</td>
+                                <td class="text-end">@UiFormatters.FileSize(item.TotalFileSizeBytes)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<section class="section-panel mt-3">
+    <h2 class="h5">Doctor/Clinic activity</h2>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Doctor/Clinic</th>
+                    <th class="text-end">Cases</th>
+                    <th class="text-end">Files</th>
+                    <th class="text-end">Sync success</th>
+                    <th class="text-end">Sync failed</th>
+                    <th>Last case</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.DoctorClinicActivity.Count == 0)
+                {
+                    <tr><td colspan="6" class="empty-state py-4">No activity for this filter.</td></tr>
+                }
+                @foreach (var item in Model.DoctorClinicActivity)
+                {
+                    <tr>
+                        <td>@item.DoctorClinicName</td>
+                        <td class="text-end">@item.TotalCases</td>
+                        <td class="text-end">@item.UploadedFiles</td>
+                        <td class="text-end">@item.SuccessfulSyncCount</td>
+                        <td class="text-end">@item.FailedSyncCount</td>
+                        <td>@(item.LastCaseDate?.ToString("g") ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="section-panel mt-3">
+    <h2 class="h5">Sync report</h2>
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Target</th>
+                    <th class="text-end">Success</th>
+                    <th class="text-end">Failed</th>
+                    <th>Last success</th>
+                    <th>Last failure</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.SyncReport.Count == 0)
+                {
+                    <tr><td colspan="5" class="empty-state py-4">No sync activity for this filter.</td></tr>
+                }
+                @foreach (var item in Model.SyncReport)
+                {
+                    <tr>
+                        <td>@UiFormatters.SyncTargetLabel(item.SyncTarget)</td>
+                        <td class="text-end"><span class="badge text-bg-success">@item.SuccessCount</span></td>
+                        <td class="text-end"><span class="badge text-bg-danger">@item.FailedCount</span></td>
+                        <td>@(item.LastSuccessDate?.ToString("g") ?? "-")</td>
+                        <td>@(item.LastFailureDate?.ToString("g") ?? "-")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="section-panel mt-3">
+    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+        <div>
+            <h2 class="h5 mb-1">Failed sync follow-up</h2>
+            <p class="text-muted small mb-0">Latest 50 failed sync attempts for the current report scope.</p>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Case</th>
+                    <th>Patient</th>
+                    <th>Doctor/Clinic</th>
+                    <th>Target</th>
+                    <th>Error</th>
+                    <th>Failed</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.FailedSyncs.Count == 0)
+                {
+                    <tr><td colspan="7" class="empty-state py-4">No failed syncs for this filter.</td></tr>
+                }
+                @foreach (var item in Model.FailedSyncs)
+                {
+                    <tr>
+                        <td>@item.CaseNumber</td>
+                        <td>@item.PatientName</td>
+                        <td>@item.DoctorClinicName</td>
+                        <td>@UiFormatters.SyncTargetLabel(item.SyncTarget)</td>
+                        <td class="text-break">@item.ErrorMessage</td>
+                        <td>@item.LastFailedOn.ToString("g")</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-controller="Cases" asp-action="Details" asp-route-id="@item.CaseId">Open case</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
