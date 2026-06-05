@@ -2,10 +2,9 @@
     ViewData["Title"] = "Access Denied";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-7 col-lg-5">
-        <h1 class="h3 mb-3">Access denied</h1>
-        <p class="text-muted">Your account does not have permission to access this page.</p>
-        <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Go to home</a>
-    </div>
-</div>
+<section class="section-panel mx-auto" style="max-width: 620px;">
+    <p class="eyebrow mb-2">Permission check</p>
+    <h1 class="h3 mb-3">Access denied</h1>
+    <p class="text-muted">Your account does not have permission to access this page.</p>
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Go to dashboard</a>
+</section>

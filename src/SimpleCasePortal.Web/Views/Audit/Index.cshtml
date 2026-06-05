@@ -4,15 +4,16 @@
     ViewData["Title"] = "Audit Logs";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="page-heading">
     <div>
+        <p class="eyebrow mb-1">Security trail</p>
         <h1 class="h3 mb-1">Audit Logs</h1>
-        <div class="text-muted">Read-only review of system activity.</div>
+        <p class="text-muted mb-0">Read-only review of system activity.</p>
     </div>
     <span class="badge text-bg-secondary">@Model.TotalCount total</span>
 </div>
 
-<form asp-action="Index" method="get" class="border rounded p-3 mb-3">
+<form asp-action="Index" method="get" class="filter-panel mb-3">
     <input type="hidden" name="PageNumber" value="1" />
     <div class="row g-3">
         <div class="col-md-3">
@@ -65,48 +66,50 @@
     </div>
 </form>
 
-<div class="table-responsive">
-    <table class="table table-striped align-middle">
-        <thead>
-            <tr>
-                <th>Created</th>
-                <th>User</th>
-                <th>Action</th>
-                <th>Entity</th>
-                <th>Entity ID</th>
-                <th>IP address</th>
-                <th>Summary</th>
-                <th class="text-end">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @if (!Model.Logs.Any())
-            {
+<section class="section-panel">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
                 <tr>
-                    <td colspan="8" class="text-center text-muted py-4">No audit logs found.</td>
+                    <th>Created</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Entity ID</th>
+                    <th>IP address</th>
+                    <th>Summary</th>
+                    <th class="text-end">Actions</th>
                 </tr>
-            }
-            else
-            {
-                foreach (var log in Model.Logs)
+            </thead>
+            <tbody>
+                @if (!Model.Logs.Any())
                 {
                     <tr>
-                        <td>@log.CreatedOn.ToLocalTime().ToString("g")</td>
-                        <td>@log.UserDisplayName</td>
-                        <td>@log.Action</td>
-                        <td>@log.EntityName</td>
-                        <td>@log.EntityId</td>
-                        <td>@(log.IpAddress ?? "-")</td>
-                        <td class="text-break">@(string.IsNullOrWhiteSpace(log.Summary) ? "-" : log.Summary)</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@log.Id">Details</a>
-                        </td>
+                        <td colspan="8" class="empty-state py-4">No audit logs found.</td>
                     </tr>
                 }
-            }
-        </tbody>
-    </table>
-</div>
+                else
+                {
+                    foreach (var log in Model.Logs)
+                    {
+                        <tr>
+                            <td>@log.CreatedOn.ToLocalTime().ToString("g")</td>
+                            <td>@log.UserDisplayName</td>
+                            <td><span class="badge text-bg-light border">@log.Action</span></td>
+                            <td>@log.EntityName</td>
+                            <td>@log.EntityId</td>
+                            <td>@(log.IpAddress ?? "-")</td>
+                            <td class="text-break">@(string.IsNullOrWhiteSpace(log.Summary) ? "-" : log.Summary)</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Details" asp-route-id="@log.Id">Details</a>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
 
 <nav aria-label="Audit log pages" class="d-flex justify-content-between align-items-center">
     <div class="text-muted">Page @Model.PageNumber of @Model.TotalPages</div>

@@ -4,104 +4,145 @@
 @inject SimpleCasePortal.Application.Interfaces.ICurrentUserService CurrentUserService
 @{
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
-    var canViewAuditLogs = User.Identity?.IsAuthenticated == true &&
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var canViewAuditLogs = isAuthenticated &&
         !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
         await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.AuditView);
-    var canViewReports = User.Identity?.IsAuthenticated == true &&
+    var canViewReports = isAuthenticated &&
         !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
         await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.ReportsView);
-    var canViewCases = User.Identity?.IsAuthenticated == true &&
+    var canViewCases = isAuthenticated &&
         !string.IsNullOrWhiteSpace(CurrentUserService.UserId) &&
         (await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.CasesViewAll) ||
             await PermissionService.HasPermissionAsync(CurrentUserService.UserId, PermissionNames.CasesViewOwn));
     var roleLabels = User.FindAll(ClaimTypes.Role).Select(claim => claim.Value).ToArray();
+    var pageTitle = ViewData["Title"]?.ToString() ?? "Dashboard";
 }
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Simple Case Portal</title>
+    <title>@ViewData["Title"] - myline CaseBridge</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/SimpleCasePortal.Web.styles.css" asp-append-version="true" />
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-semibold" asp-area="" asp-controller="Home" asp-action="Index">Simple Case Portal</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark @(currentController == "Home" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
-                        </li>
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            @if (canViewCases)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark @(currentController == "Cases" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Cases" asp-action="Index">Cases</a>
-                                </li>
-                            }
-                            @if (canViewReports)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark @(currentController == "Reports" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
-                                </li>
-                            }
-                            @if (canViewAuditLogs)
-                            {
-                                <li class="nav-item">
-                                    <a class="nav-link text-dark @(currentController == "Audit" ? "active fw-semibold" : string.Empty)" asp-area="" asp-controller="Audit" asp-action="Index">Audit Logs</a>
-                                </li>
-                            }
-                        }
-                    </ul>
-                    <ul class="navbar-nav">
-                        @if (User.Identity?.IsAuthenticated == true)
-                        {
-                            <li class="nav-item me-lg-3">
-                                <span class="navbar-text text-dark d-block py-0">@User.Identity.Name</span>
-                                @if (roleLabels.Length > 0)
-                                {
-                                    <span class="navbar-text text-muted small d-block py-0">@string.Join(", ", roleLabels)</span>
-                                }
-                            </li>
-                            <li class="nav-item">
-                                <form asp-controller="Account" asp-action="Logout" method="post">
-                                    @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-outline-secondary btn-sm mt-1 mt-lg-0">Logout</button>
-                                </form>
-                            </li>
-                        }
-                        else
-                        {
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
-                            </li>
-                        }
-                    </ul>
-                </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
+    @if (!isAuthenticated)
+    {
+        <main role="main" class="login-shell">
             @RenderBody()
         </main>
-    </div>
+    }
+    else
+    {
+        <div class="app-shell">
+            <aside class="app-sidebar">
+                <div class="sidebar-inner">
+                    <div class="mobile-topbar">
+                        <a class="brand-lockup" asp-area="" asp-controller="Home" asp-action="Index">
+                            <img src="~/img/myline-logo.jpg" alt="myline" class="brand-logo" />
+                            <span>
+                                <span class="brand-title">CaseBridge</span>
+                                <span class="brand-subtitle">Digital case portal</span>
+                            </span>
+                        </a>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Logout</button>
+                        </form>
+                    </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Simple Case Portal
+                    <a class="brand-lockup desktop-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                        <img src="~/img/myline-logo.jpg" alt="myline" class="brand-logo" />
+                        <span>
+                            <span class="brand-title">CaseBridge</span>
+                            <span class="brand-subtitle">Clinical aligner portal</span>
+                        </span>
+                    </a>
+
+                    <nav class="sidebar-nav desktop-nav" aria-label="Primary navigation">
+                        <a class="sidebar-link @(currentController == "Home" ? "active" : string.Empty)" asp-area="" asp-controller="Home" asp-action="Index">
+                            <span class="nav-glyph">DB</span>
+                            <span>Dashboard</span>
+                        </a>
+                        @if (canViewCases)
+                        {
+                            <a class="sidebar-link @(currentController == "Cases" ? "active" : string.Empty)" asp-area="" asp-controller="Cases" asp-action="Index">
+                                <span class="nav-glyph">CS</span>
+                                <span>Cases</span>
+                            </a>
+                        }
+                        @if (canViewReports)
+                        {
+                            <a class="sidebar-link @(currentController == "Reports" ? "active" : string.Empty)" asp-area="" asp-controller="Reports" asp-action="Index">
+                                <span class="nav-glyph">RP</span>
+                                <span>Reports</span>
+                            </a>
+                        }
+                        @if (canViewAuditLogs)
+                        {
+                            <a class="sidebar-link @(currentController == "Audit" ? "active" : string.Empty)" asp-area="" asp-controller="Audit" asp-action="Index">
+                                <span class="nav-glyph">AU</span>
+                                <span>Audit Logs</span>
+                            </a>
+                        }
+                    </nav>
+
+                    <nav class="sidebar-nav mobile-nav" aria-label="Primary mobile navigation">
+                        <a class="sidebar-link @(currentController == "Home" ? "active" : string.Empty)" asp-area="" asp-controller="Home" asp-action="Index">Dashboard</a>
+                        @if (canViewCases)
+                        {
+                            <a class="sidebar-link @(currentController == "Cases" ? "active" : string.Empty)" asp-area="" asp-controller="Cases" asp-action="Index">Cases</a>
+                        }
+                        @if (canViewReports)
+                        {
+                            <a class="sidebar-link @(currentController == "Reports" ? "active" : string.Empty)" asp-area="" asp-controller="Reports" asp-action="Index">Reports</a>
+                        }
+                        @if (canViewAuditLogs)
+                        {
+                            <a class="sidebar-link @(currentController == "Audit" ? "active" : string.Empty)" asp-area="" asp-controller="Audit" asp-action="Index">Audit Logs</a>
+                        }
+                    </nav>
+
+                    <div class="sidebar-footer desktop-user">
+                        <div class="small text-muted">Signed in as</div>
+                        <div class="user-name text-break">@User.Identity?.Name</div>
+                        @if (roleLabels.Length > 0)
+                        {
+                            <div class="d-flex flex-wrap gap-1 mt-2">
+                                @foreach (var role in roleLabels)
+                                {
+                                    <span class="role-pill">@role</span>
+                                }
+                            </div>
+                        }
+                        <form asp-controller="Account" asp-action="Logout" method="post" class="mt-3">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm w-100">Logout</button>
+                        </form>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="app-main">
+                <main role="main" class="content-wrap">
+                    <div class="app-topbar">
+                        <div>
+                            <div class="eyebrow">myline CaseBridge</div>
+                            <h1 class="h4 mb-0">@pageTitle</h1>
+                        </div>
+                    </div>
+                    @RenderBody()
+                </main>
+                <footer class="app-footer">
+                    &copy; 2026 myline CaseBridge. Secure clinical case operations.
+                </footer>
+            </div>
         </div>
-    </footer>
+    }
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
